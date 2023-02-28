@@ -4,6 +4,7 @@ import functools
 import http.client as httplib
 import itertools
 import logging
+import threading
 from unittest import mock
 
 from .stubs import VCRHTTPConnection, VCRHTTPSConnection
@@ -517,9 +518,13 @@ def reset_patchers():
         yield mock.patch.object(curl.CurlAsyncHTTPClient, "fetch_impl", _CurlAsyncHTTPClient_fetch_impl)
 
 
+_force_reset_lock = threading.RLock()
+
+
 @contextlib.contextmanager
 def force_reset():
     with contextlib.ExitStack() as exit_stack:
+        exit_stack.enter_context(_force_reset_lock)
         for patcher in reset_patchers():
             exit_stack.enter_context(patcher)
         yield
