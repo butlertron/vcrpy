@@ -10,7 +10,7 @@ import wrapt
 from ._handle_coroutine import handle_coroutine
 from .errors import UnhandledHTTPRequestError
 from .matchers import get_matchers_results, method, requests_match, uri
-from .patch import CassettePatcherBuilder
+from .patch import CassettePatcherBuilder, _force_reset_lock
 from .persisters.filesystem import FilesystemPersister
 from .record_mode import RecordMode
 from .serializers import yamlserializer
@@ -63,8 +63,9 @@ class CassetteContextDecorator:
 
     def _patch_generator(self, cassette):
         with contextlib.ExitStack() as exit_stack:
-            for patcher in CassettePatcherBuilder(cassette).build():
-                exit_stack.enter_context(patcher)
+            with _force_reset_lock:
+                for patcher in CassettePatcherBuilder(cassette).build():
+                    exit_stack.enter_context(patcher)
             log_format = "{action} context for cassette at {path}."
             log.debug(log_format.format(action="Entering", path=cassette._path))
             yield cassette
